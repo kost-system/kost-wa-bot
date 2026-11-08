@@ -159,16 +159,8 @@ app.post('/send-message', async (req: Request, res: Response) => {
 
   try {
     const rawChatId = formatToChatId(phone);
-    // Resolve nomor terdaftar di WhatsApp untuk mendapatkan valid wid / LID
-    let targetChatId = rawChatId;
-    try {
-      const numberId = await client.getNumberId(rawChatId);
-      if (numberId?._serialized) {
-        targetChatId = numberId._serialized;
-      }
-    } catch (e) {
-      console.warn(`[getWid Warning] Gagal resolve getNumberId untuk ${rawChatId}, fallback ke default.`);
-    }
+    // Untuk pengiriman media foto resi, WhatsApp Web membutuhkan targetChatId berupa raw phone @c.us bukan LID
+    const targetChatId = rawChatId;
 
     let sent: any;
     if (imageBase64) {
