@@ -18,12 +18,16 @@ let isConnected = false;
 let qrCodeString = '';
 
 // Buat client whatsapp-web.js dengan persistent local session
+const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || 
+  (process.platform === 'win32' ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' : undefined);
+
 const client = new Client({
   authStrategy: new LocalAuth({
     dataPath: path.resolve(process.cwd(), 'auth_session'),
   }),
   puppeteer: {
     headless: true,
+    ...(executablePath ? { executablePath } : {}),
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
