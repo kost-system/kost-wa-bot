@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { Client, LocalAuth } from 'whatsapp-web.js';
+import { Client, LocalAuth, MessageMedia } from 'whatsapp-web.js';
 import qrcode from 'qrcode-terminal';
 import path from 'path';
 
@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 5001;
 const API_SECRET_KEY = process.env.API_SECRET_KEY || 'kost_secret_wa_bot_key_2026';
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '15mb' }));
 
 let isConnected = false;
 let qrCodeString = '';
@@ -152,9 +152,9 @@ app.post('/send-message', async (req: Request, res: Response) => {
     });
   }
 
-  const { phone, message } = req.body;
-  if (!phone || !message) {
-    return res.status(400).json({ error: 'Nomor telepon (phone) dan pesan (message) wajib diisi' });
+  const { phone, message, imageBase64, imageMimeType, imageFileName } = req.body;
+  if (!phone || (!message && !imageBase64)) {
+    return res.status(400).json({ error: 'Nomor telepon dan (pesan atau gambar) wajib diisi' });
   }
 
   try {
@@ -170,7 +170,16 @@ app.post('/send-message', async (req: Request, res: Response) => {
       console.warn(`[getWid Warning] Gagal resolve getNumberId untuk ${rawChatId}, fallback ke default.`);
     }
 
-    const sent = await client.sendMessage(targetChatId, message);
+    let sent: any;
+    if (imageBase64) {
+      // Hilangkan header data:image/...;base64, jika ada
+      const pureBase64 = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+      const media = new MessageMedia(imageMimeType || 'image/png', pureBase64, imageFileName || 'invoice.png');
+      sent = await client.sendMessage(targetChatId, media, { caption: message || '' });
+    } else {
+      sent = await client.sendMessage(targetChatId, message);
+    }
+
     res.json({
       success: true,
       phone,
