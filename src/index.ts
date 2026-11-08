@@ -175,7 +175,18 @@ app.post('/send-message', async (req: Request, res: Response) => {
       // Hilangkan header data:image/...;base64, jika ada
       const pureBase64 = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
       const media = new MessageMedia(imageMimeType || 'image/png', pureBase64, imageFileName || 'invoice.png');
-      sent = await client.sendMessage(targetChatId, media, { caption: message || '' });
+      try {
+        sent = await client.sendMessage(targetChatId, media, { caption: message || '', sendMediaAsDocument: false });
+      } catch (mediaErr: any) {
+        console.warn('[WA Media Send Fallback]', mediaErr.message);
+        // Fallback coba kirim sebagai document atau teks jika format image langsung ditolak oleh web version
+        try {
+          sent = await client.sendMessage(targetChatId, media, { caption: message || '', sendMediaAsDocument: true });
+        } catch (docErr: any) {
+          console.warn('[WA Doc Send Fallback]', docErr.message);
+          sent = await client.sendMessage(targetChatId, message || 'Bukti kwitansi pembayaran kost terverifikasi lunas.');
+        }
+      }
     } else {
       sent = await client.sendMessage(targetChatId, message);
     }
