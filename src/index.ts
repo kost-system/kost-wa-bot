@@ -158,12 +158,24 @@ app.post('/send-message', async (req: Request, res: Response) => {
   }
 
   try {
-    const chatId = formatToChatId(phone);
-    const sent = await client.sendMessage(chatId, message);
+    const rawChatId = formatToChatId(phone);
+    // Resolve nomor terdaftar di WhatsApp untuk mendapatkan valid wid / LID
+    let targetChatId = rawChatId;
+    try {
+      const numberId = await client.getNumberId(rawChatId);
+      if (numberId?._serialized) {
+        targetChatId = numberId._serialized;
+      }
+    } catch (e) {
+      console.warn(`[getWid Warning] Gagal resolve getNumberId untuk ${rawChatId}, fallback ke default.`);
+    }
+
+    const sent = await client.sendMessage(targetChatId, message);
     res.json({
       success: true,
       phone,
-      messageId: sent.id._serialized,
+      targetChatId,
+      messageId: sent?.id?._serialized || 'sent',
     });
   } catch (err: any) {
     console.error('Error saat kirim pesan:', err);
